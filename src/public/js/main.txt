@@ -1,0 +1,352 @@
+//获取商品列表容器
+var goodsBox = $(".goods-list");
+
+//获取商品列表容器内的单个模板
+var goodsLiDom = goodsBox.find("li").clone(false);
+
+//竖屏状态下的导航栏容器对象
+var classBox = $(".goods-class.portrait").find("ul");
+// 竖屏状态下的导航栏列表对象
+var classLiDom = classBox.find("li").clone(false);
+
+//横屏状态下的导航栏容器对象
+var lClassBox = $(".goods-class.landscape").find("ul");
+//横屏状态下的导航栏列表对象
+var lClassLiDom = lClassBox.find("li").clone(false);
+
+//定义缓存对象列表
+var goodsPageData = [];
+
+
+var pageBox = $(".goods-page").find(".number-box");
+var pageBoxNumber = pageBox.find(".page-btn").clone(false);
+
+
+
+//页面初始化的时候,获取商品分类列表(分类导航),并渲染到页面当中去
+$.get("http://datainfo.duapp.com/shopdata/getclass.php",function(data){
+	data = JSON.parse(data);
+
+
+	
+
+	//清空竖屏状态下的导航栏盒子
+	classBox.empty();
+
+	//清空横屏状态下的导航栏盒子
+	lClassBox.empty();
+
+	for(var i in data){
+
+		var lLi = lClassLiDom.clone(false);
+		if(i == 0){
+			lLi.addClass("active");	
+		}
+		lLi.find(".iconfont").html(data[i].icon);
+		lLi.find(".class-name").text(data[i].className);
+		lLi.attr("data-classID",data[i].classID);
+
+		//竖屏
+		var li = classLiDom.clone(false);
+		
+
+		li.attr("data-classID",data[i].classID);
+
+		getGoodsListBuff(data[i].classID);
+		li.find("a").html(data[i].icon);
+
+		classBox.append(li);
+	}
+
+	//给商品分类绑定点击事件
+	$(".goods-class").find("li").click(function(){
+		//获取当前被点击的商品分类ID
+		var classID = $(this).attr("data-classID");
+
+		//跳转到新的商品列表的时候,当前有多少页需要被清零
+		pageIndex = 0;
+
+		//调用数据渲染方法
+		getGoodsList(classID);
+
+		//更新选中样式
+		$(".goods-class").find(".active").removeClass("active");
+		$(this).addClass("active");
+
+	});
+
+	var num = data.length;
+	
+	classBox.width(num*0.57+"rem");
+});
+
+//页面初始化时,默认加载的商品列表数据
+getGoodsList();
+
+
+//定义更新商品列表的函数:每次执行,都会在相应的地方重新更新dom元素
+function getGoodsList(){
+
+	var goodsData = "";//参数
+	var gi = 0;
+
+	console.log("加载页面");
+
+	if(!!arguments[0]){//有参数
+		goodsData = "classID=" + arguments[0]+"&pageCode="+pageIndex;//
+
+		gi = arguments[0];
+	}else{
+		goodsData = "pageCode="+pageIndex;
+	}
+
+	if(gi == 0){
+		goodsListInit();
+	}else{
+		goodsListInit(gi);
+	}
+	/*
+	for(var i in goodsPageData){
+		if(goodsPageData[i].classID == gi){
+			var data = goodsPageData[i].dataList;
+
+			domUpdate(data);
+
+			return;
+		}
+	}
+*/
+	$.ajax({
+		url:"http://datainfo.duapp.com/shopdata/getGoods.php",
+		type:"post",
+		dataType : "JSONP",
+		data : goodsData,
+		success :function(data){
+
+			//请求到数据之后,将数据存放到缓存列表当中
+			var abc = {
+				classID:gi,
+				dataList : data
+			};
+
+			goodsPageData.push(abc);
+
+
+			domUpdate(data);
+
+		}
+	});
+
+
+	// if(!!arguments[1]){
+	// 	goodsData = arguments[0];
+	// }
+
+
+	//定义渲染数据函数
+	function domUpdate(data){
+		goodsBox.empty();
+
+			//数据渲染
+			for(var i in data){
+
+				//获取数据
+				var imgSrc = data[i].goodsListImg;
+				var goodsName = data[i].goodsName;
+				var price = data[i].price*1;
+				var discount = data[i].discount/10;
+				var oldPrice = price;
+				if(discount != 0){
+					oldPrice = price/(data[i].discount/10);
+				}
+
+				oldPrice = oldPrice.toFixed(2);
+
+
+				//处理数据
+				var li = goodsLiDom.clone(false);
+
+				li.find("img").attr("src",imgSrc);
+				li.find(".goods-name").text(goodsName);
+				li.find(".text").find("span").text("¥ "+price);
+				li.find(".text").find("del").text("¥ "+oldPrice);
+
+				//把标签加入到页面对应的dom当中去
+				goodsBox.append(li);
+				
+			}
+	}
+
+}
+
+function getGoodsListBuff(classID){
+
+	var goodsData = "";//参数
+
+	if(!!arguments[0]){//有参数
+		goodsData = "classID=" + arguments[0];//
+	
+	}
+
+
+	for(var i in goodsPageData){
+		if(goodsPageData[i].classID == classID){
+			return true;
+		}
+	}
+
+	$.ajax({
+		url:"http://datainfo.duapp.com/shopdata/getGoods.php",
+		type:"post",
+		dataType : "JSONP",
+		data : goodsData,
+		success :function(data){
+
+			//请求到数据之后,讲数据存放到缓存列表当中
+			var abc = {
+				classID:classID,
+				dataList : data
+			};
+
+			goodsPageData.push(abc);
+
+			// console.log("分类Id为"+classID+"的数据请求成功!");
+		}
+	});
+}
+
+
+var pageIndex = 0;
+
+
+
+function goodsListInit(classID){
+
+	pageBox.empty();
+	
+
+	var ajaxData = null;
+
+	if(!arguments[0]){//没有参数的时候
+		ajaxData ="pageCode=" + pageIndex;
+	}else{
+		ajaxData = "classID=" + classID + "&pageCode=" + pageIndex;
+	}
+
+	$.ajax({
+		url:"http://datainfo.duapp.com/shopdata/getGoods.php",
+		type:"post",
+		dataType:"JSONP",
+		data:ajaxData,
+		success :function(data){
+
+
+			if(data.length == 10){//页面数据数量有可能大于10或者等于10
+
+				pageIndex++;
+
+				if(!arguments[0]){//没有参数的时候
+					goodsListInit();
+				}else{
+					goodsListInit(classID);
+				}
+
+			}else if(data == 0){//上一页刚好显示完成,当前类型数据有pageIndex条数据
+
+				pageIndex --;
+
+				var a = (pageIndex+1)*10;
+				
+				var pageNum = pageIndex +1;
+
+				if(pageIndex > 0){
+					for(var i = 0;i < pageNum ; i++){
+						// pageBox = $(".goods-page").find(".number-box");
+						var pageDom = pageBoxNumber.clone(false);
+						pageDom.text(i+1);
+						pageDom.attr("data-type",i+1);
+
+						pageBox.append(pageDom);
+					}
+					$(".page-btn").show();
+
+					if(pageIndex == 0){
+						$(".page-btn[data-type='back']").hide();
+						$(".page-btn[data-type='next']").show();
+					}else if(){
+						$(".page-btn[data-type='next']").hide();
+						$(".page-btn[data-type='back']").show();
+					}
+				}else{
+					$(".page-btn").hide();
+				}
+
+				
+
+				//执行绑定点击事件函数
+				bindPage();
+
+			}else{
+				//显示上一页和下一页按钮
+				$(".page-btn").show();
+
+				//pageIndex ++ 之前,pageindex代表装满十条数据页面的数量,
+				var a = pageIndex*10 + data.length;
+
+				pageIndex++;
+
+				var pageNum = pageIndex;
+
+				for(var i = 0;i < pageNum ; i++){
+					// pageBox = $(".goods-page").find(".number-box");
+					var pageDom = pageBoxNumber.clone(false);
+					pageDom.text(i+1);
+					pageDom.attr("data-type",i+1);
+
+					pageBox.append(pageDom);
+				}
+
+
+				//执行绑定点击事件函数
+				bindPage();
+
+			}
+		}
+	});
+}
+
+//绑定翻页按钮点击事件
+function bindPage(){
+	$(".page-btn").click(function(){
+
+	
+	var type = $(this).attr("data-type");
+	var classID = $(".goods-class").find(".active").attr("data-classID");
+
+	
+
+	switch(type){
+		case "back":
+			//跳转到新的商品列表的时候,当前有多少页需要被清零
+			pageIndex--;
+
+			break;
+		case "next":
+			pageIndex++;
+
+			break;
+		default:
+			pageIndex = type-1;
+			break;
+	}
+
+	if(classID){
+
+		getGoodsList(classID);
+	}else{
+		getGoodsList();
+	}
+});
+}
+
+

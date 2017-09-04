@@ -1,0 +1,1 @@
+var mySwiper=new Swiper(".home-page",{pagination:".swiper-pagination",onInit:function(n){var a=n.activeIndex;a++,$(".banner"+a).removeClass("anm")},onSlideChangeStart:function(n){$(".swiper-slide").each(function(){$(this).addClass("anm")});var a=n.activeIndex;a++,$(".banner"+a).removeClass("anm")}});
